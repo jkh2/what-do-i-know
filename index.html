@@ -505,30 +505,45 @@
     const data = { nodes, edges };
     let options = {
       nodes: { 
-        shape: 'box', 
+        shape: 'dot', 
+        size: 20,
         font: { 
-          size: 16, 
-          color: '#0a0a0a',
-          face: 'Inter'
+          size: 14, 
+          color: '#ffffff',
+          face: 'Inter',
+          strokeWidth: 3,
+          strokeColor: '#0a0a0a'
         }, 
-        margin: 15,
-        borderWidth: 2,
+        borderWidth: 3,
         shadow: {
           enabled: true,
-          color: 'rgba(255, 215, 0, 0.3)',
-          size: 10,
+          color: 'rgba(255, 215, 0, 0.5)',
+          size: 15,
           x: 0,
           y: 0
+        },
+        scaling: {
+          min: 15,
+          max: 40,
+          label: {
+            enabled: true,
+            min: 12,
+            max: 20
+          }
         }
       },
       edges: { 
-        arrows: 'to', 
-        smooth: { type: 'curvedCW' },
-        color: {
-          color: '#ffd700',
-          highlight: '#ffed4e'
+        smooth: { 
+          type: 'continuous',
+          roundness: 0.5
         },
-        width: 2,
+        color: {
+          color: 'rgba(255, 215, 0, 0.4)',
+          highlight: 'rgba(255, 237, 78, 0.8)'
+        },
+        width: 1.5,
+        hoverWidth: 3,
+        selectionWidth: 4,
         shadow: {
           enabled: true,
           color: 'rgba(255, 215, 0, 0.2)',
@@ -537,30 +552,86 @@
           y: 0
         }
       },
-      layout: { hierarchical: { direction: 'UD', sortMethod: 'directed' } },
-      physics: false,
+      layout: { 
+        improvedLayout: true,
+        randomSeed: 2
+      },
+      physics: {
+        enabled: true,
+        forceAtlas2Based: {
+          gravitationalConstant: -50,
+          centralGravity: 0.01,
+          springLength: 200,
+          springConstant: 0.08,
+          damping: 0.4,
+          avoidOverlap: 0.5
+        },
+        maxVelocity: 50,
+        minVelocity: 0.1,
+        solver: 'forceAtlas2Based',
+        stabilization: {
+          enabled: true,
+          iterations: 1000,
+          updateInterval: 10,
+          onlyDynamicEdges: false,
+          fit: true
+        }
+      },
       interaction: { 
         dragNodes: true, 
         zoomView: true, 
         dragView: true,
-        hover: true
+        hover: true,
+        hoverConnectedEdges: true,
+        navigationButtons: true,
+        keyboard: {
+          enabled: true,
+          speed: {x: 10, y: 10, zoom: 0.02}
+        }
       }
     };
     
     network = new vis.Network(container, data, options);
 
+    // Track the current context node for proper hierarchical branching
+    let currentContextNode = 1; // Start with root
+    let contextKeywords = new Map(); // Map keywords to their node IDs
+    let conceptConnections = new Map(); // Track semantic connections between concepts
+    
     // Helper functions
     function processText(text, parentId) {
-      const words = text.split(' ').filter(word => word.length > 3);
-      const uniqueTerms = [...new Set(words)].slice(0, 3);
+      const lowerText = text.toLowerCase();
       
-      uniqueTerms.forEach(term => {
-        if (!nodes.getIds().some(id => nodes.get(id).label === term)) {
-          const confidence = Math.floor(Math.random() * 3) + 3;
+      // Analyze semantic connections in the text
+      const existingNodes = nodes.get();
+      const mentionedNodes = [];
+      
+      // Find all existing concepts mentioned in this text
+      existingNodes.forEach(node => {
+        const nodeLabel = node.label.toLowerCase();
+        if (lowerText.includes(nodeLabel) && node.id !== parentId) {
+          mentionedNodes.push(node.id);
+        }
+      });
+      
+      // Create new nodes from the text
+      const words = extractConcepts(text);
+      const newNodeIds = [];
+      
+      words.forEach(term => {
+        if (!nodes.getIds().some(id => nodes.get(id).label.toLowerCase() === term.toLowerCase())) {
+          const confidence = analyzeConfidence(term, text);
+          const newNodeId = nodeCounter;
+          
+          // Determine node size based on importance
+          const importance = calculateImportance(term, text);
+          const nodeSize = 15 + (importance * 5);
           
           nodes.add({ 
-            id: nodeCounter, 
-            label: term, 
+            id: newNodeId, 
+            label: term,
+            size: nodeSize,
+            value: importance, // For scaling
             color: getNodeColor(confidence),
             metadata: {
               confidence: confidence,
@@ -571,22 +642,226 @@
               tags: ['concept', 'auto-generated'],
               questions: [],
               verified: null,
-              importance: 3,
-              type: 'concept',
-              context: text
+              importance: importance,
+              type: detectNodeType(term, text),
+              context: text,
+              parentContext: nodes.get(currentContextNode).label
             },
             annotations: [], 
             audio: audioUrls[nodeCounter] || null 
           });
-          edges.add({ from: parentId, to: nodeCounter });
+          
+          newNodeIds.push(newNodeId);
+          contextKeywords.set(term.toLowerCase(), newNodeId);
           nodeCounter++;
           stats.nodes++;
-          
-          generateInsights(term, 'concept', text);
         }
       });
       
-      network.fit();
+      // Create connections based on semantic relationships
+      createSemanticConnections(newNodeIds, mentionedNodes, parentId, text);
+      
+      // Update current context if appropriate
+      if (newNodeIds.length > 0 && isMajorConcept(words[0], text)) {
+        currentContextNode = newNodeIds[0];
+        insightsContent.textContent = `🎯 Focusing on "${words[0]}" - subsequent concepts will branch from here\n\n` + insightsContent.textContent;
+      }
+      
+      // Stabilize and fit the network
+      network.stabilize(100);
+      setTimeout(() => network.fit(), 500);
+    }
+    
+    // Extract meaningful concepts from text
+    function extractConcepts(text) {
+      // Remove common words and extract meaningful terms
+      const stopWords = ['the', 'is', 'are', 'was', 'were', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'that', 'this', 'these', 'those', 'it', 'its'];
+      
+      const words = text.toLowerCase()
+        .replace(/[.,!?;:'"]/g, '')
+        .split(' ')
+        .filter(word => word.length > 2 && !stopWords.includes(word));
+      
+      // Use frequency and position to determine importance
+      const conceptMap = new Map();
+      words.forEach((word, index) => {
+        if (!conceptMap.has(word)) {
+          conceptMap.set(word, {
+            term: word,
+            frequency: 1,
+            firstPosition: index,
+            importance: 1
+          });
+        } else {
+          const concept = conceptMap.get(word);
+          concept.frequency++;
+          concept.importance = concept.frequency * (1 / (concept.firstPosition + 1));
+        }
+      });
+      
+      // Sort by importance and return top concepts
+      return Array.from(conceptMap.values())
+        .sort((a, b) => b.importance - a.importance)
+        .slice(0, 5)
+        .map(c => c.term);
+    }
+    
+    // Create semantic connections between nodes
+    function createSemanticConnections(newNodeIds, mentionedNodeIds, parentId, text) {
+      const lowerText = text.toLowerCase();
+      
+      // Connect new nodes to parent with varying strengths
+      newNodeIds.forEach((nodeId, index) => {
+        const edgeWeight = Math.max(1, 4 - index); // Stronger connection for more important concepts
+        
+        edges.add({ 
+          from: parentId, 
+          to: nodeId,
+          width: edgeWeight,
+          value: edgeWeight
+        });
+        
+        // Create cross-connections between co-mentioned concepts
+        mentionedNodeIds.forEach(mentionedId => {
+          if (!edges.get({
+            filter: item => 
+              (item.from === nodeId && item.to === mentionedId) ||
+              (item.from === mentionedId && item.to === nodeId)
+          }).length) {
+            edges.add({
+              from: nodeId,
+              to: mentionedId,
+              width: 1,
+              dashes: [5, 5],
+              color: { color: 'rgba(255, 215, 0, 0.3)' }
+            });
+          }
+        });
+        
+        // Connect new nodes to each other if they appear together
+        newNodeIds.forEach(otherId => {
+          if (otherId !== nodeId && index < newNodeIds.indexOf(otherId)) {
+            edges.add({
+              from: nodeId,
+              to: otherId,
+              width: 0.5,
+              color: { color: 'rgba(255, 237, 78, 0.2)' }
+            });
+          }
+        });
+      });
+      
+      // Create connections based on semantic patterns
+      if (lowerText.includes('similar to') || lowerText.includes('like')) {
+        // Create similarity connections
+        newNodeIds.forEach(newId => {
+          mentionedNodeIds.forEach(mentionedId => {
+            edges.add({
+              from: newId,
+              to: mentionedId,
+              width: 2,
+              dashes: [10, 5],
+              color: { color: 'rgba(139, 92, 246, 0.5)' }, // Purple for similarity
+              label: 'similar'
+            });
+          });
+        });
+      }
+      
+      if (lowerText.includes('opposite') || lowerText.includes('unlike') || lowerText.includes('different from')) {
+        // Create contrast connections
+        newNodeIds.forEach(newId => {
+          mentionedNodeIds.forEach(mentionedId => {
+            edges.add({
+              from: newId,
+              to: mentionedId,
+              width: 2,
+              dashes: [2, 2],
+              color: { color: 'rgba(239, 68, 68, 0.5)' }, // Red for contrast
+              label: 'contrast'
+            });
+          });
+        });
+      }
+    }
+    
+    // Analyze confidence level for a concept
+    function analyzeConfidence(term, text) {
+      const lowerText = text.toLowerCase();
+      
+      if (lowerText.includes('definitely') || lowerText.includes('certainly') || lowerText.includes('absolutely')) {
+        return 5;
+      } else if (lowerText.includes('probably') || lowerText.includes('likely')) {
+        return 4;
+      } else if (lowerText.includes('maybe') || lowerText.includes('perhaps') || lowerText.includes('possibly')) {
+        return 2;
+      } else if (lowerText.includes("don't know") || lowerText.includes('uncertain') || lowerText.includes('not sure')) {
+        return 1;
+      }
+      return 3; // Default moderate confidence
+    }
+    
+    // Calculate importance of a concept
+    function calculateImportance(term, text) {
+      let importance = 3;
+      const lowerText = text.toLowerCase();
+      const lowerTerm = term.toLowerCase();
+      
+      // Boost for emphasis words
+      if (lowerText.includes(`${lowerTerm} is important`) || 
+          lowerText.includes(`${lowerTerm} is key`) ||
+          lowerText.includes(`${lowerTerm} is crucial`) ||
+          lowerText.includes(`${lowerTerm} is essential`)) {
+        importance += 2;
+      }
+      
+      // Boost for being the subject
+      if (lowerText.startsWith(lowerTerm) || lowerText.includes(`. ${lowerTerm}`)) {
+        importance += 1;
+      }
+      
+      // Boost for frequency
+      const regex = new RegExp(lowerTerm, 'g');
+      const matches = lowerText.match(regex);
+      if (matches && matches.length > 1) {
+        importance += Math.min(2, matches.length - 1);
+      }
+      
+      return Math.min(importance, 5);
+    }
+    
+    // Detect the type of node based on context
+    function detectNodeType(term, context) {
+      const lowerTerm = term.toLowerCase();
+      const lowerContext = context.toLowerCase();
+      
+      if (lowerContext.includes('theory') || lowerContext.includes('hypothesis')) {
+        return 'theory';
+      } else if (lowerContext.includes('fact') || lowerContext.includes('proven')) {
+        return 'fact';
+      } else if (lowerContext.includes('example') || lowerContext.includes('instance')) {
+        return 'example';
+      } else if (lowerContext.includes('question') || lowerContext.includes('wonder')) {
+        return 'question';
+      } else if (lowerContext.includes('definition') || lowerContext.includes('means')) {
+        return 'definition';
+      }
+      return 'concept';
+    }
+    
+    // Determine if a concept is major enough to become new context
+    function isMajorConcept(term, text) {
+      const lowerText = text.toLowerCase();
+      const lowerTerm = term.toLowerCase();
+      
+      const subjectPatterns = [
+        new RegExp(`${lowerTerm}\\s+(?:is|are|was|were|has|have)`, 'i'),
+        new RegExp(`^${lowerTerm}`, 'i'),
+        new RegExp(`(?:studying|learning|exploring|discussing)\\s+${lowerTerm}`, 'i'),
+        new RegExp(`${lowerTerm}\\s+(?:includes|consists|contains)`, 'i')
+      ];
+      
+      return subjectPatterns.some(pattern => pattern.test(lowerText));
     }
 
     function getNodeColor(confidence) {
@@ -991,7 +1266,7 @@
           const text = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
             transcript += text + ' ';
-            processText(text, 1);
+            processText(text, currentContextNode); // Use current context instead of always root
             promptUser(text);
           } else {
             interimTranscript += text;
@@ -1049,7 +1324,7 @@
       if (text) {
         transcript += text + ' ';
         transcriptDiv.textContent = transcript;
-        processText(text, 1);
+        processText(text, currentContextNode); // Use current context
         promptUser(text);
         manualInput.value = '';
       }
@@ -1083,14 +1358,29 @@
       });
     });
 
-    // Layout change
+    // Layout change - updated for network layout
     layoutSelect.addEventListener('change', () => {
-      options.layout = layoutSelect.value === 'radial'
-        ? { randomSeed: 1 }
-        : { hierarchical: { direction: 'UD', sortMethod: 'directed' } };
-      options.physics = layoutSelect.value === 'radial';
+      if (layoutSelect.value === 'radial') {
+        options.layout = { 
+          improvedLayout: true,
+          randomSeed: 2
+        };
+        options.physics.enabled = true;
+      } else {
+        options.layout = { 
+          hierarchical: { 
+            direction: 'UD', 
+            sortMethod: 'directed',
+            levelSeparation: 150,
+            nodeSpacing: 100,
+            treeSpacing: 200
+          } 
+        };
+        options.physics.enabled = false;
+      }
       network.setOptions(options);
-      network.fit();
+      network.redraw();
+      setTimeout(() => network.fit(), 500);
     });
 
     // Show stats
@@ -1106,6 +1396,8 @@
       if (confirmReset) {
         transcript = '';
         nodeCounter = 2;
+        currentContextNode = 1; // Reset context to root
+        contextKeywords.clear(); // Clear keyword mappings
         audioChunks = [];
         audioUrls = {};
         
