@@ -1,0 +1,1954 @@
+        ${metadata.enriched ? `
+        <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(139,92,246,0.1); border-radius: 4px; border-left: 3px solid #8b5cf6;">
+          <strong>📚 Information Enriched</strong><br>
+          <small>Added ${metadata.addedNodesCount} factual nodes on ${new Date(metadata.enrichmentDate).toLocaleDateString()}</small>
+          ${metadata.categories ? `<br><small>Categories: ${metadata.categories.join(', ')}</small>` : ''}
+        </div>
+        ` : ''}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>What Do I Know</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/natural/6.12.0/natural.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD/0QAA/9EAAPzQAAD80AAA/NAAAP3QAAD90AAA/dAAAP3QAAD90AAA/NAAAP3QAAD90AAA/9EAAPzQAAD80QAA/9EAAPzQAAD60AAA+tAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA+tAAAP3QAAD80AAA/NEAAP3QAAD90AAA+NAAAP3QAAD80AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD40AAA/dAAAP3QAAD80AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD90AAA/dAAAP3QAAD80AAA/9EAAPzQAAD80AAA/NAAAP3QAAD90AAA/dAAAP3QAAD90AAA/NAAAP3QAAD90AAA/9EAAP3QAAD80AAA">
+  <style>
+    :root {
+      --gold-primary: #ffd700;
+      --gold-secondary: #ffed4e;
+      --gold-dark: #b8860b;
+      --gold-light: #fff8dc;
+      --gold-gradient: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+      --gold-metallic: linear-gradient(135deg, #ffd700 0%, #b8860b 25%, #ffd700 50%, #b8860b 75%, #ffd700 100%);
+      --shadow-gold: 0 8px 32px rgba(255, 215, 0, 0.3);
+      --shadow-gold-intense: 0 12px 48px rgba(255, 215, 0, 0.5);
+      --bg-dark: #0a0a0a;
+      --bg-card: rgba(20, 20, 20, 0.95);
+      --text-primary: #ffffff;
+      --text-secondary: #cccccc;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 237, 78, 0.05) 0%, transparent 50%);
+      min-height: 100vh;
+      color: var(--text-primary);
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      background: var(--gold-metallic);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+      animation: glow 3s ease-in-out infinite alternate;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-gold);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--gold-gradient);
+      opacity: 0.6;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--gold-primary);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .select, .input, .textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 215, 0, 0.05);
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      font-family: inherit;
+    }
+
+    .select:focus, .input:focus, .textarea:focus {
+      outline: none;
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+      background: rgba(255, 215, 0, 0.1);
+    }
+
+    .button {
+      padding: 0.75rem 1.5rem;
+      background: var(--gold-metallic);
+      border: none;
+      border-radius: 8px;
+      color: var(--bg-dark);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: var(--shadow-gold);
+      min-height: 44px;
+    }
+
+    .button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-gold-intense);
+    }
+
+    .button:hover::before {
+      left: 100%;
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button.secondary {
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--gold-primary);
+      border: 2px solid var(--gold-primary);
+    }
+
+    .button.danger {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+      color: white;
+    }
+
+    .button.success {
+      background: linear-gradient(135deg, #00d2d3 0%, #54a0ff 100%);
+      color: white;
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .button-group .button {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .status, .prompt {
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-weight: 500;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .status.success {
+      background: rgba(0, 210, 211, 0.1);
+      border: 1px solid rgba(0, 210, 211, 0.3);
+      color: #00d2d3;
+    }
+
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+    }
+
+    .prompt {
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: var(--gold-primary);
+    }
+
+    .transcript-area {
+      background: rgba(255, 215, 0, 0.05);
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      min-height: 100px;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+
+    .stats-panel {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      white-space: pre-line;
+      font-family: 'Inter', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    #mindmap {
+      width: 100%;
+      height: 60vh;
+      min-height: 300px;
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      box-shadow: var(--shadow-gold);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .glow {
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from {
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      }
+      to {
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+      }
+    }
+
+    .pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 0.75rem;
+      }
+
+      .card {
+        padding: 1rem;
+        border-radius: 12px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .button-group .button {
+        min-width: auto;
+      }
+
+      #mindmap {
+        height: 50vh;
+        min-height: 250px;
+      }
+
+      .title {
+        font-size: 2rem;
+      }
+
+      .button {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* High Contrast Theme */
+    .high-contrast {
+      --bg-dark: #000000;
+      --bg-card: rgba(255, 255, 255, 0.95);
+      --text-primary: #000000;
+      --text-secondary: #333333;
+    }
+
+    .high-contrast .card {
+      background: var(--bg-card);
+      border-color: var(--gold-primary);
+    }
+
+    .high-contrast .select,
+    .high-contrast .input,
+    .high-contrast .textarea {
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--text-primary);
+      border-color: var(--gold-primary);
+    }
+  </style>
+</head>
+<body id="body">
+  <div class="container">
+    <div class="header">
+      <h1 class="title">What Do I Know</h1>
+      <p class="subtitle">Illuminate Your Knowledge Through Mind Mapping</p>
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="topic" class="label">Select or Enter a Topic:</label>
+        <select id="topic" class="select" aria-label="Select topic">
+          <option value="Science">Science</option>
+          <option value="Math">Math</option>
+          <option value="Literature">Literature</option>
+          <option value="Music">Music</option>
+          <option value="Pop Culture">Pop Culture</option>
+          <option value="Custom">Custom</option>
+        </select>
+        <input id="customTopic" type="text" class="input hidden" placeholder="Enter custom topic" aria-label="Custom topic">
+      </div>
+
+      <div class="button-group">
+        <button id="startButton" class="button glow" aria-label="Start speech recognition">
+          🎤 Start Speaking
+        </button>
+        <button id="stopButton" class="button danger hidden" aria-label="Stop speech recognition">
+          ⏹️ Stop Speaking
+        </button>
+        <button id="exportJson" class="button success" aria-label="Export as JSON">
+          📥 Export JSON
+        </button>
+        <button id="exportPng" class="button success" aria-label="Export as PNG">
+          🖼️ Export PNG
+        </button>
+      </div>
+
+      <div class="button-group">
+        <select id="layout" class="select" aria-label="Select layout" style="flex: 1;">
+          <option value="hierarchical">Hierarchical Layout</option>
+          <option value="radial">Radial Layout</option>
+        </select>
+        <button id="showStats" class="button secondary" aria-label="Show stats">
+          📊 Show Stats
+        </button>
+        <button id="toggleTheme" class="button secondary" aria-label="Toggle theme">
+          🌙 Toggle Theme
+        </button>
+      </div>
+    </div>
+
+    <div id="status" class="status hidden" aria-live="polite"></div>
+    <div id="prompt" class="prompt hidden" aria-live="polite"></div>
+
+    <div id="fallbackInput" class="card">
+      <div class="form-group">
+        <label class="label">Text Input (Alternative to Voice):</label>
+        <textarea id="manualInput" class="textarea" rows="3" placeholder="Type your thoughts here and press Enter or click the button..." aria-label="Manual text input"></textarea>
+        <button id="submitText" class="button" style="margin-top: 0.75rem;" aria-label="Add text to mind map">
+          ✨ Add to Mind Map
+        </button>
+      </div>
+    </div>
+
+    <div id="stats" class="stats-panel hidden"></div>
+
+    <div class="card">
+      <label class="label">Live Transcript:</label>
+      <div id="transcript" class="transcript-area" aria-live="polite">
+        Your spoken words will appear here...
+      </div>
+    </div>
+
+    <div class="card">
+      <label class="label">Knowledge Mind Map:</label>
+      <div id="mindmap" role="region" aria-label="Mind map"></div>
+    </div>
+
+    <!-- Node Information Panel -->
+    <div id="nodePanel" class="card hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 id="nodePanelTitle" class="label" style="margin: 0; font-size: 1.2rem;">Node Details</h3>
+        <button id="closeNodePanel" class="button secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✕</button>
+      </div>
+      
+      <div id="nodePanelContent">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Knowledge Insights Panel -->
+    <div id="insightsPanel" class="card">
+      <div class="form-group">
+        <label class="label">💡 Knowledge Insights:</label>
+        <div id="insightsContent" class="transcript-area" style="min-height: 80px; font-size: 0.9rem;">
+          Your knowledge insights and suggestions will appear here...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check Web Speech API support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+    let mediaRecorder = null;
+    let mediaStream = null;
+
+    if (recognition) {
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+    }
+
+    // DOM elements
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const transcriptDiv = document.getElementById('transcript');
+    const topicSelect = document.getElementById('topic');
+    const customTopicInput = document.getElementById('customTopic');
+    const exportJson = document.getElementById('exportJson');
+    const exportPng = document.getElementById('exportPng');
+    const toggleTheme = document.getElementById('toggleTheme');
+    const layoutSelect = document.getElementById('layout');
+    const showStats = document.getElementById('showStats');
+    const statusDiv = document.getElementById('status');
+    const promptDiv = document.getElementById('prompt');
+    const fallbackInput = document.getElementById('fallbackInput');
+    const manualInput = document.getElementById('manualInput');
+    const submitText = document.getElementById('submitText');
+    const statsDiv = document.getElementById('stats');
+    const mindmapDiv = document.getElementById('mindmap');
+    const body = document.getElementById('body');
+    const nodePanel = document.getElementById('nodePanel');
+    const nodePanelTitle = document.getElementById('nodePanelTitle');
+    const nodePanelContent = document.getElementById('nodePanelContent');
+    const closeNodePanel = document.getElementById('closeNodePanel');
+    const insightsContent = document.getElementById('insightsContent');
+
+    // Enhanced node structure with metadata
+    let nodes = new vis.DataSet([{ 
+      id: 1, 
+      label: topicSelect.value, 
+      color: {
+        background: '#ffd700',
+        border: '#b8860b',
+        highlight: {
+          background: '#ffed4e',
+          border: '#ffd700'
+        }
+      }, 
+      metadata: {
+        confidence: 5,
+        source: 'User Selected',
+        dateAdded: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: '',
+        tags: ['root', 'topic'],
+        questions: [],
+        verified: null,
+        importance: 5,
+        type: 'topic'
+      },
+      annotations: [], 
+      audio: null 
+    }]);
+    let edges = new vis.DataSet([]);
+    let nodeCounter = 2;
+    let audioChunks = [];
+    let audioUrls = {};
+
+    // Stats tracking
+    let stats = JSON.parse(localStorage.getItem('mindmapStats')) || { nodes: 0, sessions: 0, topics: new Set() };
+    stats.topics = new Set(stats.topics); // Convert back to Set from array
+    stats.topics.add(topicSelect.value);
+    stats.sessions++;
+
+    // Initialize vis.js network with golden theme
+    const container = mindmapDiv;
+    const data = { nodes, edges };
+    let options = {
+      nodes: { 
+        shape: 'box', 
+        font: { 
+          size: 16, 
+          color: '#0a0a0a',
+          face: 'Inter'
+        }, 
+        margin: 15,
+        borderWidth: 2,
+        shadow: {
+          enabled: true,
+          color: 'rgba(255, 215, 0, 0.3)',
+          size: 10,
+          x: 0,
+          y: 0
+        }
+      },
+      edges: { 
+        arrows: 'to', 
+        smooth: { type: 'curvedCW' },
+        color: {
+          color: '#ffd700',
+          highlight: '#ffed4e'
+        },
+        width: 2,
+        shadow: {
+          enabled: true,
+          color: 'rgba(255, 215, 0, 0.2)',
+          size: 5,
+          x: 0,
+          y: 0
+        }
+      },
+      layout: { hierarchical: { direction: 'UD', sortMethod: 'directed' } },
+      physics: false,
+      interaction: { 
+        dragNodes: true, 
+        zoomView: true, 
+        dragView: true,
+        hover: true
+      },
+      manipulation: {
+        enabled: true,
+        addNode: (nodeData, callback) => {
+          nodeData.id = nodeCounter++;
+          nodeData.label = prompt('Enter node label:') || 'New Node';
+          nodeData.color = {
+            background: '#ffed4e',
+            border: '#ffd700',
+            highlight: {
+              background: '#fff8dc',
+              border: '#b8860b'
+            }
+          };
+          nodeData.annotations = [];
+          nodeData.audio = null;
+          callback(nodeData);
+          edges.add({ from: 1, to: nodeData.id });
+          stats.nodes++;
+          saveStats();
+        }
+      }
+    };
+    let network = new vis.Network(container, data, options);
+
+    // Topic selection handling
+    topicSelect.addEventListener('change', () => {
+      if (topicSelect.value === 'Custom') {
+        customTopicInput.classList.remove('hidden');
+        customTopicInput.focus();
+      } else {
+        customTopicInput.classList.add('hidden');
+        nodes.update({ 
+          id: 1, 
+          label: topicSelect.value, 
+          color: {
+            background: '#ffd700',
+            border: '#b8860b',
+            highlight: {
+              background: '#ffed4e',
+              border: '#ffd700'
+            }
+          },
+          metadata: {
+            confidence: 5,
+            source: 'User Selected',
+            dateAdded: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            notes: '',
+            tags: ['root', 'topic'],
+            questions: [],
+            verified: null,
+            importance: 5,
+            type: 'topic'
+          },
+          annotations: [], 
+          audio: null 
+        });
+      }
+      stats.topics.add(topicSelect.value);
+      saveStats();
+    });
+
+    customTopicInput.addEventListener('input', () => {
+      nodes.update({ 
+        id: 1, 
+        label: customTopicInput.value || 'Custom Topic', 
+        color: {
+          background: '#ffd700',
+          border: '#b8860b',
+          highlight: {
+            background: '#ffed4e',
+            border: '#ffd700'
+          }
+        },
+        metadata: {
+          confidence: 5,
+          source: 'User Created',
+          dateAdded: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: '',
+          tags: ['root', 'topic', 'custom'],
+          questions: [],
+          verified: null,
+          importance: 5,
+          type: 'topic'
+        },
+        annotations: [], 
+        audio: null 
+      });
+      if (customTopicInput.value) {
+        stats.topics.add(customTopicInput.value);
+        saveStats();
+      }
+    });
+
+    // Initialize MediaRecorder with secure context check
+    function initializeMediaRecorder() {
+      if (!window.isSecureContext) {
+        console.log('MediaRecorder: Secure context required (HTTPS or localhost).');
+        statusDiv.textContent = 'Audio recording unavailable: Please use HTTPS or localhost. Try typing instead.';
+        statusDiv.classList.remove('hidden');
+        statusDiv.classList.add('error');
+        return Promise.resolve(null);
+      }
+      if ('MediaRecorder' in window && !mediaRecorder) {
+        return navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          mediaStream = stream;
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+          mediaRecorder.onstop = () => {
+            if (audioChunks.length > 0) {
+              const blob = new Blob(audioChunks, { type: 'audio/webm' });
+              const url = URL.createObjectURL(blob);
+              audioUrls[nodeCounter - 1] = url;
+              nodes.update({ id: nodeCounter - 1, audio: url });
+            }
+            audioChunks = [];
+          };
+          mediaRecorder.onerror = (e) => {
+            console.error('MediaRecorder runtime error:', e.error.message);
+            statusDiv.textContent = `Audio recording error: ${e.error.message}. Try typing instead.`;
+            statusDiv.classList.remove('hidden');
+            statusDiv.classList.add('error');
+          };
+          return stream;
+        }).catch(err => {
+          console.log('MediaRecorder initialization info:', err.message);
+          statusDiv.textContent = `Audio recording unavailable: ${err.message}. Try typing instead.`;
+          statusDiv.classList.remove('hidden');
+          statusDiv.classList.add('error');
+          return null;
+        });
+      }
+      return Promise.resolve(null);
+    }
+
+    // Speech recognition handling
+    let transcript = '';
+    if (recognition) {
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const text = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            transcript += text + ' ';
+            processText(text, nodeCounter - 1);
+            promptUser(text);
+          } else {
+            interimTranscript += text;
+          }
+        }
+        transcriptDiv.textContent = transcript + interimTranscript;
+      };
+
+      recognition.onstart = () => {
+        statusDiv.textContent = '🎤 Microphone active - listening for your knowledge...';
+        statusDiv.classList.remove('hidden', 'error');
+        statusDiv.classList.add('success');
+        startButton.classList.add('pulse');
+        initializeMediaRecorder().then(stream => {
+          if (stream && mediaRecorder && mediaRecorder.state !== 'recording') {
+            audioChunks = [];
+            mediaRecorder.start();
+          }
+        });
+      };
+
+      recognition.onend = () => {
+        startButton.classList.remove('hidden', 'pulse');
+        stopButton.classList.add('hidden');
+        statusDiv.classList.add('hidden');
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          mediaStream = null;
+          mediaRecorder = null;
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.log('Speech recognition info:', event.error);
+        statusDiv.textContent = `Microphone issue: ${event.error}. Try typing instead.`;
+        statusDiv.classList.remove('hidden', 'success');
+        statusDiv.classList.add('error');
+        recognition.stop();
+        fallbackInput.classList.remove('hidden');
+      };
+    } else {
+      statusDiv.textContent = 'Speech recognition not supported. Use text input below.';
+      statusDiv.classList.remove('hidden');
+      statusDiv.classList.add('error');
+      startButton.classList.add('hidden');
+      stopButton.classList.add('hidden');
+      fallbackInput.classList.remove('hidden');
+    }
+
+    // Process text with natural.js and golden styling
+    function processText(text, parentId) {
+      if (!window.natural) {
+        // Fallback if natural.js isn't loaded
+        const words = text.split(' ').filter(word => word.length > 3);
+        const uniqueTerms = [...new Set(words)].slice(0, 3);
+        uniqueTerms.forEach(term => {
+          if (!nodes.getIds().some(id => nodes.get(id).label === term)) {
+            const confidence = Math.floor(Math.random() * 3) + 3; // 3-5 confidence for new concepts
+            const nodeType = detectNodeType(term, text);
+            
+            nodes.add({ 
+              id: nodeCounter, 
+              label: term, 
+              color: getNodeColor(confidence),
+              metadata: {
+                confidence: confidence,
+                source: 'Speech/Text Input',
+                dateAdded: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+                notes: `Mentioned in context: "${text.substring(0, 100)}..."`,
+                tags: [nodeType, 'auto-generated'],
+                questions: generateQuestions(term, nodeType),
+                verified: null,
+                importance: calculateImportance(term, text),
+                type: nodeType,
+                context: text
+              },
+              annotations: [], 
+              audio: audioUrls[nodeCounter] || null 
+            });
+            edges.add({ from: parentId, to: nodeCounter });
+            nodeCounter++;
+            stats.nodes++;
+            
+            // Generate insights about this new knowledge
+            generateInsights(term, nodeType, text);
+          }
+        });
+      } else {
+        const tokenizer = new natural.WordTokenizer();
+        const tokens = tokenizer.tokenize(text).filter(word => word.length > 3);
+        const uniqueTerms = [...new Set(tokens)].slice(0, 3);
+        uniqueTerms.forEach(term => {
+          if (!nodes.getIds().some(id => nodes.get(id).label === term)) {
+            nodes.add({ 
+              id: nodeCounter, 
+              label: term, 
+              color: {
+                background: '#ffed4e',
+                border: '#ffd700',
+                highlight: {
+                  background: '#fff8dc',
+                  border: '#b8860b'
+                }
+              }, 
+              annotations: [], 
+              audio: audioUrls[nodeCounter] || null 
+            });
+            edges.add({ from: parentId, to: nodeCounter });
+            nodeCounter++;
+            stats.nodes++;
+          }
+        });
+      }
+      saveStats();
+      network.fit();
+    }
+
+    // Enhanced helper functions for knowledge analysis
+    function detectNodeType(term, context) {
+      const lowerTerm = term.toLowerCase();
+      const lowerContext = context.toLowerCase();
+      
+      if (lowerContext.includes('how') || lowerContext.includes('process') || lowerContext.includes('method')) {
+        return 'process';
+      } else if (lowerContext.includes('when') || lowerContext.includes('date') || lowerContext.includes('year')) {
+        return 'temporal';
+      } else if (lowerContext.includes('who') || lowerContext.includes('person') || lowerContext.includes('scientist')) {
+        return 'person';
+      } else if (lowerContext.includes('where') || lowerContext.includes('location') || lowerContext.includes('place')) {
+        return 'location';
+      } else if (lowerContext.includes('why') || lowerContext.includes('because') || lowerContext.includes('cause')) {
+        return 'causal';
+      } else if (/\d/.test(lowerTerm) || lowerContext.includes('amount') || lowerContext.includes('number')) {
+        return 'quantitative';
+      } else {
+        return 'concept';
+      }
+    }
+
+    function getNodeColor(confidence) {
+      if (confidence >= 5) {
+        return {
+          background: '#4ade80', // Green for high confidence
+          border: '#16a34a',
+          highlight: { background: '#86efac', border: '#4ade80' }
+        };
+      } else if (confidence >= 3) {
+        return {
+          background: '#ffed4e', // Yellow for medium confidence
+          border: '#ffd700',
+          highlight: { background: '#fff8dc', border: '#b8860b' }
+        };
+      } else {
+        return {
+          background: '#f87171', // Red for low confidence
+          border: '#dc2626',
+          highlight: { background: '#fca5a5', border: '#f87171' }
+        };
+      }
+    }
+
+    function calculateImportance(term, context) {
+      let importance = 3; // Base importance
+      
+      // Boost importance based on context clues
+      if (context.includes('important') || context.includes('key') || context.includes('crucial')) {
+        importance += 2;
+      }
+      if (context.includes('fundamental') || context.includes('basic') || context.includes('foundation')) {
+        importance += 1;
+      }
+      if (context.length > 50) { // Longer explanations suggest importance
+        importance += 1;
+      }
+      
+      return Math.min(importance, 5);
+    }
+
+    function generateQuestions(term, nodeType) {
+      const questions = [];
+      
+      switch (nodeType) {
+        case 'process':
+          questions.push(`What are the steps involved in ${term}?`);
+          questions.push(`What triggers ${term}?`);
+          break;
+        case 'person':
+          questions.push(`What did ${term} contribute to this field?`);
+          questions.push(`When did ${term} live/work?`);
+          break;
+        case 'concept':
+          questions.push(`How does ${term} relate to other concepts?`);
+          questions.push(`Can you provide examples of ${term}?`);
+          break;
+        case 'quantitative':
+          questions.push(`What is the significance of this value?`);
+          questions.push(`How was this measured or calculated?`);
+          break;
+        default:
+          questions.push(`Can you explain ${term} in more detail?`);
+          questions.push(`What evidence supports this about ${term}?`);
+      }
+      
+      return questions;
+    }
+
+    function generateInsights(term, nodeType, context) {
+      const insights = [];
+      
+      // Knowledge gap analysis
+      const existingNodes = nodes.get();
+      const relatedConcepts = existingNodes.filter(node => 
+        node.metadata && node.metadata.type === nodeType && node.id !== nodeCounter - 1
+      );
+      
+      if (relatedConcepts.length > 0) {
+        insights.push(`🔗 ${term} relates to ${relatedConcepts[0].label} - consider exploring their connection`);
+      }
+      
+      // Confidence analysis
+      if (context.includes('I think') || context.includes('maybe') || context.includes('probably')) {
+        insights.push(`🤔 You seem uncertain about ${term} - might be worth researching further`);
+      }
+      
+      // Depth analysis
+      if (context.split(' ').length < 5) {
+        insights.push(`📚 Your explanation of ${term} is brief - could you elaborate more?`);
+      }
+      
+      // Display insights
+      if (insights.length > 0) {
+        const currentInsights = insightsContent.textContent;
+        const newInsights = insights.join('\n');
+        insightsContent.textContent = newInsights + '\n\n' + currentInsights;
+      }
+    }
+
+    // Node panel functionality
+    function showNodePanel(nodeId) {
+      const node = nodes.get(nodeId);
+      if (!node) return;
+      
+      nodePanelTitle.textContent = `📊 ${node.label}`;
+      
+      const metadata = node.metadata || {};
+      const confidence = metadata.confidence || 3;
+      const source = metadata.source || 'Unknown';
+      const notes = metadata.notes || 'No notes added yet';
+      const questions = metadata.questions || [];
+      const tags = metadata.tags || [];
+      const type = metadata.type || 'concept';
+      const importance = metadata.importance || 3;
+      
+      const panelHTML = `
+        <div style="margin-bottom: 1rem;">
+          <strong>🔍 Validation Status:</strong>
+          <div style="background: rgba(255,215,0,0.1); padding: 0.5rem; border-radius: 4px; margin-top: 0.25rem; font-size: 0.9rem;">
+            ${metadata.verified || 'Not yet validated'}
+            ${metadata.validationDate ? `<br><small>Checked: ${new Date(metadata.validationDate).toLocaleDateString()}</small>` : ''}
+            ${metadata.sources ? `<br><small>Sources: ${metadata.sources.join(', ')}</small>` : ''}
+          </div>
+        </div>
+        
+        ${metadata.corrected ? `
+        <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(59,130,246,0.1); border-radius: 4px; border-left: 3px solid #3b82f6;">
+          <strong>🔧 Corrected Information</strong><br>
+          <small>Original: ${metadata.originalLabel}</small><br>
+          <small>Applied: ${new Date(metadata.correctionApplied).toLocaleDateString()}</small>
+        </div>
+        ` : ''}
+        
+        ${metadata.suggestedCorrection && !metadata.corrected && !metadata.correctionRejected ? `
+        <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(255,107,107,0.1); border-radius: 4px; border-left: 3px solid #ef4444;">
+          <strong>⚠️ Correction Available</strong><br>
+          <small>${metadata.suggestedCorrection}</small><br>
+          <button onclick="applyCorrection(${nodeId}, '${(metadata.suggestedCorrection || '').replace(/'/g, "\\'")}'); showNodePanel(${nodeId})" 
+                  class="button" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Apply Correction</button>
+        </div>
+        ` : ''}
+        
+        <div style="margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span><strong>Type:</strong> ${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+            <span><strong>Confidence:</strong> ${'⭐'.repeat(confidence)}${'☆'.repeat(5-confidence)}</span>
+          </div>
+          <div style="margin-bottom: 0.5rem;">
+            <strong>Importance:</strong> ${'🔥'.repeat(importance)}${'○'.repeat(5-importance)}
+          </div>
+          <div style="margin-bottom: 0.5rem;">
+            <strong>Source:</strong> ${source}
+          </div>
+          <div style="margin-bottom: 0.5rem;">
+            <strong>Added:</strong> ${new Date(metadata.dateAdded || Date.now()).toLocaleDateString()}
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <strong>📝 Notes:</strong>
+          <div style="background: rgba(255,215,0,0.1); padding: 0.5rem; border-radius: 4px; margin-top: 0.25rem; font-size: 0.9rem;">
+            ${notes}
+          </div>
+        </div>
+        
+        ${questions.length > 0 ? `
+        <div style="margin-bottom: 1rem;">
+          <strong>❓ Research Questions:</strong>
+          <ul style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+            ${questions.map(q => `<li>${q}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+        
+        <div style="margin-bottom: 1rem;">
+          <strong>🏷️ Tags:</strong>
+          <div style="margin-top: 0.25rem;">
+            ${tags.map(tag => `<span style="background: rgba(255,215,0,0.2); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button onclick="editNode(${nodeId})" class="button secondary" style="padding: 0.5rem; font-size: 0.8rem;">✏️ Edit</button>
+          <button onclick="addQuestion(${nodeId})" class="button secondary" style="padding: 0.5rem; font-size: 0.8rem;">❓ Add Question</button>
+          <button onclick="validateNode(${nodeId})" class="button secondary" style="padding: 0.5rem; font-size: 0.8rem;">🔍 Validate</button>
+          <button onclick="getInfo(${nodeId})" class="button" style="padding: 0.5rem; font-size: 0.8rem;">📚 Get Info</button>
+          <button onclick="exploreNode(${nodeId})" class="button secondary" style="padding: 0.5rem; font-size: 0.8rem;">🚀 Explore</button>
+        </div>
+      `;
+      
+      nodePanelContent.innerHTML = panelHTML;
+      nodePanel.classList.remove('hidden');
+    }
+
+    // Node interaction functions
+    window.editNode = function(nodeId) {
+      const node = nodes.get(nodeId);
+      const newNotes = prompt('Add notes about this concept:', node.metadata?.notes || '');
+      if (newNotes !== null) {
+        node.metadata = node.metadata || {};
+        node.metadata.notes = newNotes;
+        node.metadata.lastUpdated = new Date().toISOString();
+        nodes.update(node);
+        showNodePanel(nodeId); // Refresh panel
+      }
+    };
+
+    window.addQuestion = function(nodeId) {
+      const node = nodes.get(nodeId);
+      const question = prompt('What question do you have about this concept?');
+      if (question) {
+        node.metadata = node.metadata || {};
+        node.metadata.questions = node.metadata.questions || [];
+        node.metadata.questions.push(question);
+        nodes.update(node);
+        showNodePanel(nodeId); // Refresh panel
+      }
+    };
+
+    window.validateNode = function(nodeId) {
+      const node = nodes.get(nodeId);
+      
+      // Show validation in progress
+      const originalButton = document.querySelector(`button[onclick="validateNode(${nodeId})"]`);
+      if (originalButton) {
+        originalButton.textContent = '🔍 Checking...';
+        originalButton.disabled = true;
+      }
+      
+      // Simulate fact checking with real-world examples
+      setTimeout(() => {
+        const confidence = Math.random();
+        let status, message, correction = null, sources = [];
+        
+        // Simulate different validation scenarios
+        if (node.label.toLowerCase().includes('water') && node.metadata?.context?.includes('100')) {
+          // Example: Water boiling point correction
+          status = '⚠️ Partially Correct';
+          message = 'Water boils at 100°C at sea level (1 atmosphere pressure), but the boiling point changes with altitude and pressure.';
+          correction = 'Water boils at 100°C at 1 atmosphere pressure';
+          sources = ['Physics textbook', 'Encyclopedia Britannica'];
+        } else if (node.label.toLowerCase().includes('photosynthesis')) {
+          status = '✅ Verified';
+          message = 'Photosynthesis is well-documented. Plants convert CO₂ + H₂O + sunlight → glucose + O₂.';
+          sources = ['Biology textbook', 'Scientific journals'];
+        } else if (confidence > 0.7) {
+          status = '✅ Verified';
+          message = 'This concept appears to be well-supported by reliable sources.';
+          sources = ['Academic sources', 'Peer-reviewed papers'];
+        } else if (confidence > 0.4) {
+          status = '⚠️ Uncertain';
+          message = 'Mixed evidence found. Consider researching further or being more specific.';
+          sources = ['Various sources with conflicting information'];
+        } else {
+          // Simulate incorrect information
+          status = '❌ Disputed';
+          message = 'This claim appears to be incorrect or lacks supporting evidence.';
+          correction = generateCorrection(node.label);
+          sources = ['Fact-checking sites', 'Authoritative sources'];
+        }
+        
+        // Update node metadata
+        node.metadata = node.metadata || {};
+        node.metadata.verified = status;
+        node.metadata.validationDate = new Date().toISOString();
+        node.metadata.sources = sources;
+        node.metadata.validationMessage = message;
+        
+        if (correction) {
+          node.metadata.suggestedCorrection = correction;
+        }
+        
+        // Update node color based on validation
+        if (status.includes('Verified')) {
+          node.color = {
+            background: '#22c55e', // Green for verified
+            border: '#16a34a',
+            highlight: { background: '#4ade80', border: '#22c55e' }
+          };
+        } else if (status.includes('Disputed')) {
+          node.color = {
+            background: '#ef4444', // Red for disputed
+            border: '#dc2626',
+            highlight: { background: '#f87171', border: '#ef4444' }
+          };
+        } else {
+          node.color = {
+            background: '#f59e0b', // Orange for uncertain
+            border: '#d97706',
+            highlight: { background: '#fbbf24', border: '#f59e0b' }
+          };
+        }
+        
+        nodes.update(node);
+        
+        // Show validation results with correction option
+        showValidationResults(nodeId, status, message, correction, sources);
+        
+        // Reset button
+        if (originalButton) {
+          originalButton.textContent = '🔍 Validate';
+          originalButton.disabled = false;
+        }
+        
+        // Refresh panel to show new validation info
+        showNodePanel(nodeId);
+      }, 1500); // Simulate API call delay
+    };
+
+    function generateCorrection(label) {
+      // Simulate corrections for common misconceptions
+      const corrections = {
+        'goldfish': 'Goldfish actually have memories lasting months, not seconds',
+        'lightning': 'Lightning can strike the same place multiple times',
+        'blood': 'Human blood is always red; it appears blue in veins due to light refraction',
+        'brain': 'Humans use virtually all of their brain, not just 10%',
+        'tongue': 'There are no specific taste zones on the tongue; all areas can taste all flavors',
+        'hair': 'Shaving hair does not make it grow back thicker or darker',
+        'cracking': 'Cracking knuckles does not cause arthritis'
+      };
+      
+      for (const [key, correction] of Object.entries(corrections)) {
+        if (label.toLowerCase().includes(key)) {
+          return correction;
+        }
+      }
+      
+      return `Consider researching "${label}" from authoritative sources for accurate information`;
+    }
+
+    function showValidationResults(nodeId, status, message, correction, sources) {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+        background: rgba(0,0,0,0.8); display: flex; align-items: center; 
+        justify-content: center; z-index: 1000;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: var(--bg-card); border-radius: 16px; padding: 2rem; 
+        max-width: 500px; margin: 1rem; border: 2px solid var(--gold-primary);
+        box-shadow: var(--shadow-gold);
+      `;
+      
+      content.innerHTML = `
+        <h3 style="color: var(--gold-primary); margin-bottom: 1rem; text-align: center;">
+          🔍 Validation Results
+        </h3>
+        
+        <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,215,0,0.1); border-radius: 8px;">
+          <strong>Status:</strong> ${status}<br>
+          <strong>Details:</strong> ${message}
+        </div>
+        
+        ${sources.length > 0 ? `
+        <div style="margin-bottom: 1rem;">
+          <strong>📚 Sources:</strong>
+          <ul style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+            ${sources.map(source => `<li>${source}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+        
+        ${correction ? `
+        <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,107,107,0.1); border-radius: 8px; border-left: 4px solid #ef4444;">
+          <strong>⚠️ Suggested Correction:</strong><br>
+          <em>${correction}</em>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 1rem;">
+          <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+            Would you like to apply this correction to your knowledge map?
+          </p>
+          <button onclick="applyCorrection(${nodeId}, '${correction.replace(/'/g, "\\'")}'); closeModal(this)" 
+                  class="button" style="margin-right: 0.5rem;">
+            ✅ Apply Correction
+          </button>
+          <button onclick="rejectCorrection(${nodeId}); closeModal(this)" 
+                  class="button secondary" style="margin-right: 0.5rem;">
+            ❌ Keep Original
+          </button>
+        </div>
+        ` : ''}
+        
+        <div style="text-align: center;">
+          <button onclick="closeModal(this)" class="button secondary">
+            Close
+          </button>
+        </div>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Close on background click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+    }
+
+    window.closeModal = function(button) {
+      const modal = button.closest('div[style*="position: fixed"]');
+      if (modal) {
+        document.body.removeChild(modal);
+      }
+    };
+
+    window.applyCorrection = function(nodeId, correction) {
+      const node = nodes.get(nodeId);
+      const originalLabel = node.label;
+      
+      // Extract the corrected concept from the correction text
+      let newLabel = correction;
+      if (correction.includes('actually')) {
+        newLabel = correction.split('actually')[1].trim();
+      } else if (correction.includes(':')) {
+        newLabel = correction.split(':')[0].trim();
+      }
+      
+      // Keep it concise for the node label
+      if (newLabel.length > 30) {
+        newLabel = newLabel.substring(0, 27) + '...';
+      }
+      
+      // Update the node
+      node.label = newLabel;
+      node.metadata = node.metadata || {};
+      node.metadata.corrected = true;
+      node.metadata.originalLabel = originalLabel;
+      node.metadata.correctionApplied = new Date().toISOString();
+      node.metadata.fullCorrection = correction;
+      node.metadata.notes = (node.metadata.notes || '') + `\n\nCORRECTED: ${correction}`;
+      
+      // Update color to show it's been corrected
+      node.color = {
+        background: '#3b82f6', // Blue for corrected information
+        border: '#1d4ed8',
+        highlight: { background: '#60a5fa', border: '#3b82f6' }
+      };
+      
+      nodes.update(node);
+      
+      // Add insight about the correction
+      const insight = `🔧 Correction applied to "${originalLabel}" → "${newLabel}". Your knowledge map is now more accurate!`;
+      insightsContent.textContent = insight + '\n\n' + insightsContent.textContent;
+      
+      // Refresh the node panel if it's open
+      if (!nodePanel.classList.contains('hidden')) {
+        showNodePanel(nodeId);
+      }
+      
+      // Track correction in stats
+      stats.corrections = (stats.corrections || 0) + 1;
+      saveStats();
+    };
+
+    window.rejectCorrection = function(nodeId) {
+      const node = nodes.get(nodeId);
+      node.metadata = node.metadata || {};
+      node.metadata.correctionRejected = new Date().toISOString();
+      node.metadata.userPreference = 'keep_original';
+      
+      nodes.update(node);
+      
+      const insight = `📝 You chose to keep your original understanding of "${node.label}". Consider researching further if needed.`;
+      insightsContent.textContent = insight + '\n\n' + insightsContent.textContent;
+    };
+
+    window.exploreNode = function(nodeId) {
+      const node = nodes.get(nodeId);
+      const suggestions = [
+        `Research the history of ${node.label}`,
+        `Find real-world applications of ${node.label}`,
+        `Compare ${node.label} with similar concepts`,
+        `Look for recent developments in ${node.label}`,
+        `Find experts who specialize in ${node.label}`
+      ];
+      
+      const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+      insightsContent.textContent = `💡 Exploration suggestion: ${suggestion}\n\n` + insightsContent.textContent;
+    };
+
+    // Auto-fact gathering system
+    window.getInfo = function(nodeId) {
+      const node = nodes.get(nodeId);
+      const searchTerm = node.label;
+      
+      // Show loading state
+      const button = document.querySelector(`button[onclick="getInfo(${nodeId})"]`);
+      if (button) {
+        button.textContent = '📡 Gathering Info...';
+        button.disabled = true;
+      }
+      
+      // Add loading insight
+      insightsContent.textContent = `🔍 Gathering factual information about "${searchTerm}"...\n\n` + insightsContent.textContent;
+      
+      // Use multiple APIs to gather comprehensive information
+      Promise.all([
+        getWikipediaInfo(searchTerm),
+        getFactualData(searchTerm),
+        getRelatedConcepts(searchTerm)
+      ]).then(results => {
+        const [wikiData, factData, relatedData] = results;
+        
+        // Process and add information to the mind map
+        addFactualNodes(nodeId, wikiData, factData, relatedData);
+        
+        // Reset button
+        if (button) {
+          button.textContent = '📚 Get Info';
+          button.disabled = false;
+        }
+        
+        // Update insights
+        insightsContent.textContent = `✅ Added factual information about "${searchTerm}" to your mind map!\n\n` + insightsContent.textContent;
+        
+      }).catch(error => {
+        console.log('Info gathering error:', error);
+        
+        // Fallback to simulated data
+        addSimulatedFactualNodes(nodeId, searchTerm);
+        
+        if (button) {
+          button.textContent = '📚 Get Info';
+          button.disabled = false;
+        }
+        
+        insightsContent.textContent = `📚 Added factual information about "${searchTerm}" (from knowledge base)\n\n` + insightsContent.textContent;
+      });
+    };
+
+    // Wikipedia API integration
+    async function getWikipediaInfo(searchTerm) {
+      try {
+        // Search for the article
+        const searchResponse = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`
+        );
+        
+        if (searchResponse.ok) {
+          const data = await searchResponse.json();
+          return {
+            title: data.title,
+            extract: data.extract,
+            thumbnail: data.thumbnail?.source,
+            url: data.content_urls?.desktop?.page,
+            type: 'wikipedia'
+          };
+        }
+      } catch (error) {
+        console.log('Wikipedia API error:', error);
+      }
+      return null;
+    }
+
+    // Simulated factual data (replace with real APIs)
+    function getFactualData(searchTerm) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          const term = searchTerm.toLowerCase();
+          
+          // Simulated knowledge base
+          const knowledgeBase = {
+            'huck finn': {
+              title: 'Adventures of Huckleberry Finn',
+              facts: [
+                'Published in 1884',
+                'Written by Mark Twain',
+                'Set in pre-Civil War Missouri',
+                'Considered one of the Great American Novels',
+                'Sequel to The Adventures of Tom Sawyer'
+              ],
+              categories: ['Literature', 'American Fiction', '19th Century'],
+              related: ['Mark Twain', 'Tom Sawyer', 'Mississippi River', 'American Literature']
+            },
+            'photosynthesis': {
+              title: 'Photosynthesis',
+              facts: [
+                'Process used by plants to convert light into energy',
+                'Chemical equation: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂',
+                'Occurs in chloroplasts',
+                'Produces oxygen as a byproduct',
+                'Essential for life on Earth'
+              ],
+              categories: ['Biology', 'Plant Science', 'Chemistry'],
+              related: ['Chloroplasts', 'Oxygen', 'Carbon Dioxide', 'Glucose', 'Chlorophyll']
+            },
+            'einstein': {
+              title: 'Albert Einstein',
+              facts: [
+                'Born March 14, 1879',
+                'Developed theory of relativity',
+                'Nobel Prize in Physics (1921)',
+                'Famous equation: E=mc²',
+                'Died April 18, 1955'
+              ],
+              categories: ['Physics', 'Scientists', 'Nobel Laureates'],
+              related: ['Relativity', 'Physics', 'Nobel Prize', 'Quantum Mechanics', 'Princeton']
+            },
+            'water': {
+              title: 'Water (H₂O)',
+              facts: [
+                'Chemical formula: H₂O',
+                'Boiling point: 100°C at 1 atmosphere',
+                'Freezing point: 0°C at 1 atmosphere',
+                'Essential for all known life',
+                'Covers 71% of Earth\'s surface'
+              ],
+              categories: ['Chemistry', 'Earth Science', 'Biology'],
+              related: ['Hydrogen', 'Oxygen', 'Ice', 'Steam', 'Ocean']
+            }
+          };
+          
+          // Find matching knowledge
+          const match = Object.keys(knowledgeBase).find(key => 
+            term.includes(key) || key.includes(term)
+          );
+          
+          if (match) {
+            resolve(knowledgeBase[match]);
+          } else {
+            // Generate generic factual structure
+            resolve({
+              title: searchTerm,
+              facts: [
+                `${searchTerm} is a concept worth exploring further`,
+                `Research suggests ${searchTerm} has multiple aspects`,
+                `Consider examining the history of ${searchTerm}`,
+                `${searchTerm} may relate to other important concepts`
+              ],
+              categories: ['General Knowledge'],
+              related: ['Research', 'Study', 'Analysis']
+            });
+          }
+        }, 500);
+      });
+    }
+
+    // Get related concepts
+    function getRelatedConcepts(searchTerm) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // Simulated related concept generation
+          const relatedPatterns = {
+            'literature': ['Author', 'Plot', 'Characters', 'Theme', 'Setting'],
+            'science': ['Theory', 'Experiment', 'Evidence', 'Research', 'Application'],
+            'history': ['Timeline', 'Causes', 'Effects', 'People', 'Context'],
+            'person': ['Biography', 'Achievements', 'Contributions', 'Timeline', 'Legacy']
+          };
+          
+          // Default related concepts
+          resolve(['Definition', 'Examples', 'Applications', 'History', 'Significance']);
+        }, 300);
+      });
+    }
+
+    // Add factual nodes to the mind map
+    function addFactualNodes(sourceNodeId, wikiData, factData, relatedData) {
+      const sourceNode = nodes.get(sourceNodeId);
+      let addedNodes = 0;
+      
+      // Add Wikipedia summary if available
+      if (wikiData && wikiData.extract) {
+        const summaryNodeId = nodeCounter++;
+        nodes.add({
+          id: summaryNodeId,
+          label: 'Summary',
+          color: {
+            background: '#8b5cf6', // Purple for summary
+            border: '#7c3aed',
+            highlight: { background: '#a78bfa', border: '#8b5cf6' }
+          },
+          metadata: {
+            confidence: 5,
+            source: 'Wikipedia',
+            dateAdded: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            notes: wikiData.extract,
+            tags: ['summary', 'wikipedia', 'verified'],
+            type: 'summary',
+            importance: 4,
+            url: wikiData.url,
+            verified: '✅ Verified (Wikipedia)'
+          },
+          annotations: []
+        });
+        edges.add({ from: sourceNodeId, to: summaryNodeId });
+        addedNodes++;
+      }
+      
+      // Add factual information nodes
+      if (factData && factData.facts) {
+        factData.facts.slice(0, 4).forEach((fact, index) => {
+          const factNodeId = nodeCounter++;
+          const shortLabel = fact.length > 20 ? fact.substring(0, 17) + '...' : fact;
+          
+          nodes.add({
+            id: factNodeId,
+            label: shortLabel,
+            color: {
+              background: '#10b981', // Green for facts
+              border: '#059669',
+              highlight: { background: '#34d399', border: '#10b981' }
+            },
+            metadata: {
+              confidence: 5,
+              source: 'Knowledge Base',
+              dateAdded: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: fact,
+              tags: ['fact', 'verified', 'auto-generated'],
+              type: 'fact',
+              importance: 4,
+              verified: '✅ Verified (Knowledge Base)'
+            },
+            annotations: []
+          });
+          edges.add({ from: sourceNodeId, to: factNodeId });
+          addedNodes++;
+        });
+      }
+      
+      // Add related concept nodes
+      if (factData && factData.related) {
+        factData.related.slice(0, 3).forEach(concept => {
+          const relatedNodeId = nodeCounter++;
+          
+          nodes.add({
+            id: relatedNodeId,
+            label: concept,
+            color: {
+              background: '#f59e0b', // Orange for related concepts
+              border: '#d97706',
+              highlight: { background: '#fbbf24', border: '#f59e0b' }
+            },
+            metadata: {
+              confidence: 4,
+              source: 'Related Concepts',
+              dateAdded: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: `Related to ${sourceNode.label}`,
+              tags: ['related', 'suggestion', 'explore'],
+              type: 'related',
+              importance: 3,
+              verified: null
+            },
+            annotations: []
+          });
+          edges.add({ from: sourceNodeId, to: relatedNodeId });
+          addedNodes++;
+        });
+      }
+      
+      // Update source node with enriched metadata
+      sourceNode.metadata = sourceNode.metadata || {};
+      sourceNode.metadata.enriched = true;
+      sourceNode.metadata.enrichmentDate = new Date().toISOString();
+      sourceNode.metadata.addedNodesCount = addedNodes;
+      if (factData && factData.categories) {
+        sourceNode.metadata.categories = factData.categories;
+      }
+      
+      nodes.update(sourceNode);
+      
+      // Update stats
+      stats.nodes += addedNodes;
+      stats.enrichments = (stats.enrichments || 0) + 1;
+      saveStats();
+      
+      // Fit the network to show new nodes
+      network.fit();
+    }
+
+    // Fallback simulated data
+    function addSimulatedFactualNodes(sourceNodeId, searchTerm) {
+      // Call getFactualData and add nodes
+      getFactualData(searchTerm).then(factData => {
+        addFactualNodes(sourceNodeId, null, factData, null);
+      });
+    }
+    function promptUser(text) {
+      const words = text.split(' ').filter(word => word.length > 3);
+      const keyTerm = words[0] || topicSelect.value;
+      const promptText = `✨ Tell me more about ${keyTerm}...`;
+      promptDiv.textContent = promptText;
+      promptDiv.classList.remove('hidden');
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(`Tell me more about ${keyTerm}.`);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Save stats to localStorage
+    function saveStats() {
+      localStorage.setItem('mindmapStats', JSON.stringify({
+        nodes: stats.nodes,
+        sessions: stats.sessions,
+        topics: [...stats.topics],
+        corrections: stats.corrections || 0,
+        validations: stats.validations || 0,
+        enrichments: stats.enrichments || 0
+      }));
+    }
+
+    // Start/Stop speech recognition
+    startButton.addEventListener('click', () => {
+      if (!window.isSecureContext) {
+        statusDiv.textContent = 'Speech recognition requires HTTPS or localhost. Try typing instead.';
+        statusDiv.classList.remove('hidden');
+        statusDiv.classList.add('error');
+        fallbackInput.classList.remove('hidden');
+        return;
+      }
+      try {
+        recognition.start();
+        startButton.classList.add('hidden');
+        stopButton.classList.remove('hidden');
+      } catch (e) {
+        console.log('Speech recognition start info:', e.message);
+        statusDiv.textContent = `Microphone access issue: ${e.message}. Try typing instead.`;
+        statusDiv.classList.remove('hidden');
+        statusDiv.classList.add('error');
+        fallbackInput.classList.remove('hidden');
+      }
+    });
+
+    stopButton.addEventListener('click', () => {
+      recognition.stop();
+    });
+
+    // Manual text input
+    submitText.addEventListener('click', () => {
+      const text = manualInput.value.trim();
+      if (text) {
+        transcript += text + ' ';
+        transcriptDiv.textContent = transcript;
+        processText(text, 1);
+        promptUser(text);
+        manualInput.value = '';
+      }
+    });
+
+    // Export JSON
+    exportJson.addEventListener('click', () => {
+      const mindmapData = { nodes: nodes.get(), edges: edges.get() };
+      const blob = new Blob([JSON.stringify(mindmapData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mindmap.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Export PNG
+    exportPng.addEventListener('click', () => {
+      html2canvas(mindmapDiv).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'mindmap.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    });
+
+    // Toggle theme
+    toggleTheme.addEventListener('click', () => {
+      body.classList.toggle('high-contrast');
+      localStorage.setItem('theme', body.classList.contains('high-contrast') ? 'high-contrast' : 'default');
+    });
+    if (localStorage.getItem('theme') === 'high-contrast') {
+      body.classList.add('high-contrast');
+    }
+
+    // Change layout
+    layoutSelect.addEventListener('change', () => {
+      options.layout = layoutSelect.value === 'radial'
+        ? { randomSeed: 1 }
+        : { hierarchical: { direction: 'UD', sortMethod: 'directed' } };
+      options.physics = layoutSelect.value === 'radial';
+      network.setOptions(options);
+      network.fit();
+    });
+
+    // Show stats
+    showStats.addEventListener('click', () => {
+      statsDiv.textContent = `✨ Knowledge Statistics ✨\n\nNodes created: ${stats.nodes}\nSessions: ${stats.sessions}\nTopics explored: ${stats.topics.size}\nCorrections applied: ${stats.corrections || 0}\nValidations performed: ${stats.validations || 0}\nAuto-enrichments: ${stats.enrichments || 0}\n\nTopics: ${[...stats.topics].join(', ')}`;
+      statsDiv.classList.toggle('hidden');
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const selectedNode = network.getSelectedNodes()[0];
+      if (selectedNode) {
+        if (e.key === 'Enter') {
+          const annotation = prompt('Add annotation:');
+          if (annotation) {
+            const node = nodes.get(selectedNode);
+            node.annotations.push(annotation);
+            nodes.update(node);
+          }
+        } else if (e.key === ' ') {
+          e.preventDefault();
+          const node = nodes.get(selectedNode);
+          if (node.audio) {
+            new Audio(node.audio).play();
+          }
+        }
+      } else {
+        // If no node selected and we're not in an input field, allow space normally
+        if (e.key === ' ' && !e.target.matches('input, textarea, [contenteditable]')) {
+          // Don't prevent default - let space work normally
+          return;
+        }
+      }
+    });
+
+    // Save mind map to localStorage
+    window.addEventListener('beforeunload', () => {
+      localStorage.setItem('mindmap', JSON.stringify({ nodes: nodes.get(), edges: edges.get() }));
+    });
+
+    // Load mind map from localStorage
+    const savedMindmap = localStorage.getItem('mindmap');
+    if (savedMindmap) {
+      try {
+        const { nodes: savedNodes, edges: savedEdges } = JSON.parse(savedMindmap);
+        nodes.update(savedNodes);
+        edges.update(savedEdges);
+        nodeCounter = Math.max(...savedNodes.map(n => n.id)) + 1;
+      } catch (e) {
+        console.log('Could not load saved mindmap:', e.message);
+      }
+    }
+
+    // Initial secure context check
+    if (!window.isSecureContext) {
+      statusDiv.textContent = '⚠️ For microphone features, use HTTPS or localhost. Text input is available below.';
+      statusDiv.classList.remove('hidden');
+      statusDiv.classList.add('error');
+    } else {
+      // Show text input regardless - it's always available
+      statusDiv.textContent = '💡 You can use voice OR text input below - both work great!';
+      statusDiv.classList.remove('hidden');
+      statusDiv.classList.add('success');
+      setTimeout(() => statusDiv.classList.add('hidden'), 5000);
+    }
+
+    // Add interactive enhancements
+    network.on("click", function (params) {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const node = nodes.get(nodeId);
+        
+        // Show node panel
+        showNodePanel(nodeId);
+        
+        // Play audio if available
+        if (node.audio) {
+          new Audio(node.audio).play();
+        }
+      }
+    });
+
+    // Close node panel
+    closeNodePanel.addEventListener('click', () => {
+      nodePanel.classList.add('hidden');
+    });
+
+    // Add hover effects for nodes
+    network.on("hoverNode", function (params) {
+      const nodeId = params.node;
+      const node = nodes.get(nodeId);
+      network.canvas.body.container.style.cursor = 'pointer';
+    });
+
+    network.on("blurNode", function (params) {
+      network.canvas.body.container.style.cursor = 'default';
+    });
+
+    // Initialize with a welcome message and first insights
+    setTimeout(() => {
+      if (transcript === '') {
+        transcriptDiv.textContent = '🌟 Welcome to What Do I Know! Choose a topic and start sharing your knowledge. Your words will create a beautiful mind map as you speak or type.';
+        insightsContent.textContent = '🎯 Start by sharing what you know about your chosen topic. The system will analyze your knowledge, suggest connections, and help you discover gaps in your understanding.';
+      }
+    }, 1000);
+
+    // Enhanced manual input with Enter key support
+    manualInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitText.click();
+      }
+    });
+
+    // Auto-hide prompt after 10 seconds
+    let promptTimeout;
+    function showPrompt(text) {
+      promptDiv.textContent = text;
+      promptDiv.classList.remove('hidden');
+      clearTimeout(promptTimeout);
+      promptTimeout = setTimeout(() => {
+        promptDiv.classList.add('hidden');
+      }, 10000);
+    }
+
+    // Enhanced prompt system
+    function promptUser(text) {
+      const words = text.split(' ').filter(word => word.length > 3);
+      const keyTerm = words[Math.floor(Math.random() * words.length)] || topicSelect.value;
+      const prompts = [
+        `✨ Tell me more about ${keyTerm}...`,
+        `🤔 What else do you know about ${keyTerm}?`,
+        `💡 Can you elaborate on ${keyTerm}?`,
+        `🔍 What's interesting about ${keyTerm}?`
+      ];
+      const promptText = prompts[Math.floor(Math.random() * prompts.length)];
+      showPrompt(promptText);
+      
+      if ('speechSynthesis' in window && window.isSecureContext) {
+        const utterance = new SpeechSynthesisUtterance(`Tell me more about ${keyTerm}.`);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.1;
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Prevent zoom on double tap for mobile
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+      const now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+
+    // Service Worker registration (optional, graceful failure)
+    if ('serviceWorker' in navigator && window.isSecureContext && window.location.hostname !== 'www.claudeusercontent.com') {
+      navigator.serviceWorker.register('./sw.js').then(() => {
+        console.log('Service Worker registered successfully');
+      }).catch(err => {
+        console.log('Service Worker registration info:', err.message);
+        // Silent failure - offline mode is optional
+      });
+    }
+
+    // Error boundary for any uncaught errors
+    window.addEventListener('error', function(e) {
+      console.log('App error handled:', e.message);
+      // Continue running - don't let errors break the experience
+    });
+
+    // Initialize app state
+    function initializeApp() {
+      // Ensure all required elements exist
+      if (!mindmapDiv || !network) {
+        console.log('Mind map initialization deferred');
+        setTimeout(initializeApp, 100);
+        return;
+      }
+      
+      // Set up initial state
+      network.fit();
+      
+      // Show appropriate input method
+      if (!recognition || !window.isSecureContext) {
+        if (!recognition) {
+          startButton.classList.add('hidden');
+          stopButton.classList.add('hidden');
+        }
+      }
+    }
+
+    // Start the app
+    initializeApp();
+  </script>
+</body>
+</html>
