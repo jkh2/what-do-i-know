@@ -237,7 +237,7 @@ We welcome contributions under our Contributor License Agreement (CLA). Contribu
 - **Patent Pending**: Epistemological computing methods and systems
 
 ### **Contact for Licensing**
-- 📧 **Commercial Licensing**: [your-email@example.com](mailto:jameskharwood2@gmail.com)
+- 📧 **Commercial Licensing**: [jameskharwood2@gmail.com](mailto:jameskharwood2@gmail.com)
 - 💼 **Enterprise Partnerships**: [jameskharwood2@gmail.com](mailto:jameskharwood2@gmail.com)
 - 🎓 **Academic Collaborations**: [jameskharwood2@gmail.com](jameskharwood2@gmail.com)
 
