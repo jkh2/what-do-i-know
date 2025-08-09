@@ -48,7 +48,7 @@ All intellectual property rights, including copyrights, patents, trademarks, and
 
 For commercial use, enterprise licensing, API access, white-label solutions, or integration into commercial products, please contact:
 
-**📧 Email**: [your-email@example.com]  
+**📧 Email**: [jameskharwood2@gmail.com]  
 **💼 Subject**: Commercial License Inquiry - What Do I Know
 
 Commercial licenses are available with different tiers and pricing based on usage, features, and distribution requirements.
@@ -59,7 +59,7 @@ All permitted uses must include the following attribution:
 
 ```
 Powered by "What Do I Know" - Intelligent Knowledge Validation System
-Copyright (c) 2025 [Your Name/Company]. All Rights Reserved.
+Copyright (c) 2025 [James Keith Harwood II]. All Rights Reserved.
 Licensed for [Educational/Research/Personal] use only.
 ```
 
