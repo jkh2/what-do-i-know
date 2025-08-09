@@ -1214,4 +1214,69 @@
     });
 
     // Start the app
-    initializeApp();      
+    initializeApp();
+    
+    // Prevent zoom on double tap for mobile
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+      const now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+    
+    // Auto-save to localStorage
+    window.addEventListener('beforeunload', () => {
+      const mindmapData = { 
+        nodes: nodes.get(), 
+        edges: edges.get(),
+        transcript: transcript,
+        stats: {
+          nodes: stats.nodes,
+          sessions: stats.sessions,
+          topics: [...stats.topics]
+        }
+      };
+      localStorage.setItem('mindmap', JSON.stringify(mindmapData));
+    });
+    
+    // Load previous session if available
+    window.addEventListener('load', () => {
+      const savedData = localStorage.getItem('mindmap');
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          const loadPrevious = confirm('Found a previous mind map session. Would you like to load it?');
+          
+          if (loadPrevious && data.nodes && data.edges) {
+            nodes.clear();
+            edges.clear();
+            nodes.add(data.nodes);
+            edges.add(data.edges);
+            
+            if (data.transcript) {
+              transcript = data.transcript;
+              transcriptDiv.textContent = transcript;
+            }
+            
+            if (data.stats) {
+              stats.nodes = data.stats.nodes || 0;
+              stats.sessions = (data.stats.sessions || 0) + 1;
+              stats.topics = new Set(data.stats.topics || []);
+            }
+            
+            // Find highest node ID to continue from there
+            const nodeIds = nodes.getIds();
+            if (nodeIds.length > 0) {
+              nodeCounter = Math.max(...nodeIds) + 1;
+            }
+            
+            network.fit();
+            insightsContent.textContent = '📂 Previous session loaded successfully!\n\n' + insightsContent.textContent;
+          }
+        } catch (e) {
+          console.log('Could not load saved session:', e);
+        }
+      }
+    });
